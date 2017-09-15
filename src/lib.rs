@@ -722,6 +722,10 @@ impl<'a> DoubleEndedIterator for Iter<'a> {
 impl<'a> ExactSizeIterator for Iter<'a> {}
 
 #[cfg(test)]
+#[macro_use]
+extern crate quickcheck;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -978,5 +982,53 @@ mod tests {
         assert_ne!(v![true, false], v![true, true]);
         assert_ne!(v![true; 400], v![true; 401]);
         assert_ne!(v![false; 401], v![false; 400]);
+    }
+
+    quickcheck! {
+        fn iter_round_trip(vec: Vec<bool>) -> bool {
+            let bitvec = SmallBitVec::from_iter(vec.clone());
+            bitvec.iter().eq(vec)
+        }
+
+        fn remove_one(vec: Vec<bool>, i: usize) -> bool {
+            if vec.is_empty() { return true }
+
+            let mut vec = vec;
+            let mut bitvec = SmallBitVec::from_iter(vec.clone());
+            let i = i % vec.len();
+
+            vec.remove(i);
+            bitvec.remove(i as u32);
+
+            bitvec.iter().eq(vec)
+        }
+
+        fn clone_eq_orig(vec: Vec<bool>) -> bool {
+            let bitvec = SmallBitVec::from_iter(vec.clone());
+            bitvec == bitvec.clone()
+        }
+
+        fn push_one(vec: Vec<bool>, val: bool) -> bool {
+            let mut vec = vec;
+            let mut bitvec = SmallBitVec::from_iter(vec.clone());
+
+            vec.push(val);
+            bitvec.push(val);
+
+            bitvec.iter().eq(vec)
+        }
+
+        fn remove_all(vec: Vec<bool>) -> bool {
+            let mut vec = vec;
+            let mut bitvec = SmallBitVec::from_iter(vec.clone());
+            while !vec.is_empty() {
+                vec.remove(0);
+                bitvec.remove(0);
+                if bitvec.iter().ne(vec.iter().cloned()) {
+                    return false
+                }
+            }
+            true
+        }
     }
 }
